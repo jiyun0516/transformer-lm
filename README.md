@@ -30,7 +30,24 @@ python -m pytest tests/test_m1_attention.py -q
 
 ## Milestone 2 · Language Model
 
-구현 예정 단계이다. Attention을 기반으로 RMSNorm, SwiGLU, Transformer 블록과 전체 언어 모델을 구성하고, cross-entropy 손실 및 토큰 생성 기능을 구현한다.
+`starter/transformer.py`에 decoder-only Transformer 언어 모델을 구현했다. 앞서 구현한 attention을 pre-norm 블록으로 구성하고, 토큰 임베딩부터 어휘별 점수 출력까지 연결했다. 입력 임베딩과 출력 projection은 별도의 가중치를 사용한다.
+
+| Component | Implementation |
+| --- | --- |
+| RMSNorm | 마지막 차원의 제곱 평균을 이용해 fp32로 정규화하고 학습 가능한 가중치 적용 |
+| SwiGLU | SiLU를 적용한 gate와 별도 선형 변환 결과를 원소별로 곱한 뒤 출력 차원으로 변환 |
+| Transformer Block | Attention과 FFN 각각에 pre-norm과 residual 연결 적용 |
+| Transformer LM | 토큰 임베딩, Transformer 블록, 최종 RMSNorm과 bias 없는 어휘 projection으로 구성 |
+| Cross-Entropy | 최댓값을 뺀 log-sum-exp 방식으로 정답 토큰의 평균 손실 계산 |
+| Autoregressive Generation | 마지막 위치의 logits로 다음 토큰을 선택하고 입력에 추가하는 과정을 반복 |
+
+생성 시 temperature에 따른 샘플링과 seed 기반 재현성을 지원한다. 문맥이 설정된 길이를 넘으면 최근 `max_len`개 토큰을 사용하며, temperature가 0이면 가장 높은 점수의 토큰을 선택한다.
+
+공개 테스트 11개를 모두 통과했다. 테스트는 정규화와 SwiGLU 계산, residual 연결, 모델 출력의 형태와 인과성, 손실의 수치적 안정성, 생성 결과의 재현성을 확인한다. 반복 시퀀스를 학습해 손실을 낮추는 테스트도 통과했다.
+
+```bash
+python -m pytest tests/test_m2_transformer.py -q
+```
 
 ---
 
@@ -45,7 +62,7 @@ python -m pytest tests/test_m1_attention.py -q
 Python 가상환경에서 의존성을 설치한다.
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install torch pytest numpy
 ```
